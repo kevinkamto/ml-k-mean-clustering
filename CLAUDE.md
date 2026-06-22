@@ -133,6 +133,25 @@ for:
 
 ---
 
+## Version Control Workflow
+
+Never commit or push directly to the `main` branch. All changes flow through
+a pull request:
+
+1. Create a feature branch off the latest `main`, for example
+   `git switch -c feature/parser` or `fix/cleaning-edge-case`.
+2. Commit the work on that branch with clear, focused commits.
+3. Push the branch and open a pull request against `main`
+   (`gh pr create --base main`).
+4. Merge the pull request into `main` after review (`gh pr merge`), then
+   delete the feature branch.
+
+Keep `main` always in a working, reproducible state. Branch names use
+`type/short-description` where type is one of `feature`, `fix`, `docs`,
+`chore`, or `refactor`.
+
+---
+
 ## Notebook Structure
 
 1. Introduction
