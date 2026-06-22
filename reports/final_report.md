@@ -5,9 +5,8 @@
 > Reproduce all numbers and figures in this report with:
 > `uv run python -m src.run_pipeline`
 > Outputs are written to `data/processed/`, `data/exports/`, and
-> `reports/figures/`. The illustrative figures in section 6 were produced from a
-> 6-file validation subset and are marked as such; the full run overwrites them
-> with the complete dataset.
+> `reports/figures/`. The numbers in section 5 are from the full 2025 dataset
+> (209 receipt logs).
 
 ---
 
@@ -72,27 +71,41 @@ selects the `k` with the highest silhouette. See
 `reports/figures/kmeans_elbow_silhouette.png` and
 `data/exports/` for the per-k table written at run time.
 
-## 5. Results (fill from the full run)
+## 5. Results (full 2025 dataset)
 
-After running the pipeline, record:
+Parsing the 209 receipt logs yields **52,067 product lines** across **24,070
+transactions** and **1,735 distinct products**. The receipts are clean: the
+cleaning step removed no rows (no duplicates, missing keys, or invalid
+quantities/prices).
 
-* Selected `k` and its silhouette score.
-* Cluster sizes (`reports/figures/kmeans_cluster_sizes.png`).
-* The per-cluster profile (`data/exports/cluster_profiles.csv`).
-* The PCA projection (`reports/figures/kmeans_pca_clusters.png`).
+### 5a. General segmentation
 
-### 5a. Illustrative result (6-file validation subset, not the full dataset)
+Sweeping `k` from 2 to 10 over all products, the silhouette score is highest at
+**k = 2 (silhouette = 0.333)**, with the elbow curve flattening over the same
+range. The two segments split cleanly into a revenue-dominant core and a long
+tail:
 
-Used only to demonstrate the pipeline end to end during development:
+| cluster | n_products | avg_quantity_sold | avg_revenue (IDR) | avg_price (IDR) | avg_txn_count | revenue_share |
+| ------- | ---------- | ----------------- | ----------------- | --------------- | ------------- | ------------- |
+| 0 | 1,014 | 89.0 | 938,088 | 12,863 | 48.0 | 93.0% |
+| 1 | 721 | 5.4 | 99,320 | 19,029 | 4.6 | 7.0% |
 
-| cluster | n_products | avg_quantity_sold | avg_revenue (IDR) | avg_price (IDR) | revenue_share |
-| ------- | ---------- | ----------------- | ----------------- | --------------- | ------------- |
-| 0 | 158 | 10.1 | 129,758 | 18,393 | 69.8% |
-| 1 | 526 | 1.5 | 16,852 | 12,431 | 30.2% |
+Cluster 0 is the **fast-moving core**: high quantity and transaction counts at a
+lower price point, carrying 93% of revenue. Cluster 1 is the **slow-moving long
+tail**: many products, each sold rarely, contributing only 7% of revenue. See
+`reports/figures/kmeans_cluster_sizes.png` and
+`reports/figures/kmeans_pca_clusters.png`.
 
-Even on a small subset the segments are sensible: a smaller group of
-higher-volume, higher-revenue products versus a large low-volume long tail. The
-full dataset typically supports a richer `k`.
+### 5b. Excise-separated refinement (pipeline default)
+
+With `SEPARATE_EXCISE` enabled (the configured default), excise (cukai) goods are
+clustered in their own pass so their extreme price and revenue do not distort the
+general segments. This is what `uv run python -m src.run_pipeline` writes to
+`data/exports/cluster_profiles.csv`. Each `segment_group` keeps its own
+silhouette-selected `k`, yielding **12 clusters** in total across the general and
+excise groups. The refinement surfaces distinct high-ticket and high-volume
+sub-segments (for example, small clusters of products averaging millions of IDR
+in revenue) that the two-way split folds into cluster 0.
 
 ## 6. Cluster interpretation template
 
