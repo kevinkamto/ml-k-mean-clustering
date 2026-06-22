@@ -2,10 +2,13 @@
 /dataset
 /.temp
 
-# Generated data products and reports (regenerate from the pipeline)
+# Generated data products (regenerate from the pipeline)
 /data/processed/
 /data/exports/
-/reports/
+
+# Generated report figures only; keep the written report (final_report.md)
+/reports/**/*.png
+/reports/**/*.pdf
 
 # uv / Python environment
 .venv/

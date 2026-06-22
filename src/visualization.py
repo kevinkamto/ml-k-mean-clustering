@@ -144,7 +144,12 @@ def plot_pca_clusters(products: pd.DataFrame) -> Path:
     coords = pca.fit_transform(scaled)
 
     plot_df = pd.DataFrame(coords, columns=["pc1", "pc2"])
-    plot_df[ProdCol.CLUSTER] = products[ProdCol.CLUSTER].to_numpy()
+    # Treat clusters as ordered categories so the hue is discrete and the
+    # palette scales to any number of clusters (segmented runs can exceed 10).
+    clusters_sorted = sorted(products[ProdCol.CLUSTER].unique())
+    plot_df[ProdCol.CLUSTER] = pd.Categorical(
+        products[ProdCol.CLUSTER].to_numpy(), categories=clusters_sorted
+    )
 
     fig, ax = plt.subplots(figsize=(9, 7))
     sns.scatterplot(
@@ -152,7 +157,7 @@ def plot_pca_clusters(products: pd.DataFrame) -> Path:
         x="pc1",
         y="pc2",
         hue=ProdCol.CLUSTER,
-        palette="tab10",
+        palette=sns.color_palette("tab20", len(clusters_sorted)),
         s=40,
         alpha=0.7,
         ax=ax,
