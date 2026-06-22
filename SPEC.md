@@ -176,7 +176,12 @@ Exclude:
 
 Algorithm:
 
-StandardScaler
+- log1p transform (retail features are strongly right-skewed), then
+- StandardScaler
+
+The log1p step stops K-Means from simply isolating a few high-volume outliers
+and produces interpretable segments. All clustering features are non-negative,
+so log1p is well defined.
 
 Acceptance Criteria:
 
@@ -283,3 +288,21 @@ The project is complete when:
 6. Visualizations are generated.
 7. Business interpretations are documented.
 8. Notebook executes from start to finish without errors.
+
+---
+
+# Delivery Workflow
+
+Changes are never committed or pushed directly to `main`. Each unit of work
+is delivered through a pull request that tracks its own GitHub issue:
+
+1. Open a GitHub issue for the work.
+2. Branch off the latest `main` (`type/short-description`, where type is one
+   of `feature`, `fix`, `docs`, `chore`, `refactor`).
+3. Commit the work on that branch.
+4. Open a pull request against `main` whose body closes the issue (for example
+   `Closes #12`). CI (lint, type-check, tests) must pass.
+5. Merge after review and delete the feature branch.
+
+Every PR maps to exactly one issue. `main` must always remain in a working,
+reproducible state.

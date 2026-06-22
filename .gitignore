@@ -2,10 +2,10 @@
 /dataset
 /.temp
 
-# Generated data products (regenerate from the pipeline)
+# Generated data products and reports (regenerate from the pipeline)
 /data/processed/
 /data/exports/
-/reports/*.pdf
+/reports/
 
 # uv / Python environment
 .venv/
@@ -21,9 +21,6 @@ __pycache__/
 .ruff_cache/
 .pytest_cache/
 .mypy_cache/
-
-# Claude Code local harness state
-/.claude
 
 # OS / editor
 .DS_Store
