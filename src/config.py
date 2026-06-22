@@ -45,6 +45,8 @@ KMEANS_N_INIT: int = 20
 LOG_TRANSFORM_FEATURES: bool = True
 
 # Features fed to the clustering model (numerical only, see SPEC.md).
+# The first six are volume/value features; the last two are temporal features
+# that let the model separate steady sellers from spiky / seasonal products.
 CLUSTERING_FEATURES: list[str] = [
     ProdCol.TOTAL_QUANTITY_SOLD,
     ProdCol.TOTAL_REVENUE,
@@ -52,6 +54,8 @@ CLUSTERING_FEATURES: list[str] = [
     ProdCol.AVERAGE_PRICE,
     ProdCol.AVERAGE_QUANTITY_PER_TRANSACTION,
     ProdCol.REVENUE_PER_TRANSACTION,
+    ProdCol.ACTIVE_DAYS,
+    ProdCol.MONTHLY_CV,
 ]
 
 

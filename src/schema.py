@@ -48,6 +48,11 @@ class ProdCol(StrEnum):
     DISCOUNT_FREQUENCY = "discount_frequency"
     AVERAGE_DISCOUNT = "average_discount"
     SALES_FREQUENCY_PER_DAY = "sales_frequency_per_day"
+    # Temporal / seasonality features (Phase 5b).
+    ACTIVE_DAYS = "active_days"
+    MONTHLY_CV = "monthly_cv"
+    RECENCY_DAYS = "recency_days"
+    WEEKEND_RATIO = "weekend_ratio"
     IS_EXCISE = "is_excise"
     # Assigned by the clustering stage.
     CLUSTER = "cluster"
