@@ -42,6 +42,30 @@ def test_evaluate_k_raises_when_too_few_samples() -> None:
         clustering.evaluate_k(tiny, k_min=5, k_max=10)
 
 
+def test_segmented_clustering_separates_excise(transactions_df) -> None:
+    products = feature_engineering.build_product_features(transactions_df)
+    result = clustering.run_segmented_clustering(products)
+    out = result.products
+
+    assert ProdCol.SEGMENT_GROUP in out.columns
+    # The lone excise product (P2) lands in the excise group.
+    p2 = out[out[ProdCol.PRODUCT_CODE] == "P2"].iloc[0]
+    assert p2[ProdCol.SEGMENT_GROUP] == "excise"
+
+    # General and excise cluster labels are disjoint.
+    general_clusters = set(
+        out.loc[out[ProdCol.SEGMENT_GROUP] == "general", ProdCol.CLUSTER]
+    )
+    excise_clusters = set(
+        out.loc[out[ProdCol.SEGMENT_GROUP] == "excise", ProdCol.CLUSTER]
+    )
+    assert general_clusters.isdisjoint(excise_clusters)
+
+    assert "segment_group" in result.profiles.columns
+    assert result.profiles["revenue_share"].sum() == pytest.approx(1.0)
+    assert out[ProdCol.CLUSTER].notna().all()
+
+
 def test_run_clustering_is_reproducible(transactions_df) -> None:
     products = feature_engineering.build_product_features(transactions_df)
     r1 = clustering.run_clustering(products)

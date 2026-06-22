@@ -176,7 +176,7 @@ def plot_cluster_sizes(products: pd.DataFrame) -> Path:
     return _save(fig, "kmeans_cluster_sizes.png")
 
 
-def generate_all(products: pd.DataFrame, scores: pd.DataFrame) -> list[Path]:
+def generate_all(products: pd.DataFrame, scores: pd.DataFrame | None) -> list[Path]:
     """Render every figure and return the list of written paths."""
     paths = [
         plot_top_products_by_quantity(products),
@@ -184,10 +184,13 @@ def generate_all(products: pd.DataFrame, scores: pd.DataFrame) -> list[Path]:
         plot_distributions(products),
         plot_feature_boxplots(products),
         plot_correlation_heatmap(products),
-        plot_elbow_and_silhouette(scores),
         plot_pca_clusters(products),
         plot_cluster_sizes(products),
     ]
+    # The elbow/silhouette plot needs the per-k sweep, which is absent when a
+    # group was too small to sweep.
+    if scores is not None:
+        paths.append(plot_elbow_and_silhouette(scores))
     return paths
 
 

@@ -44,6 +44,11 @@ KMEANS_N_INIT: int = 20
 # simply isolating a handful of outliers and yields interpretable segments.
 LOG_TRANSFORM_FEATURES: bool = True
 
+# Excise (cukai) goods such as cigarettes have extreme price and revenue and
+# distort the general segmentation. When enabled, they are clustered in a
+# separate pass so the non-excise segments stay clean.
+SEPARATE_EXCISE: bool = True
+
 # Features fed to the clustering model (numerical only, see SPEC.md).
 # The first six are volume/value features; the last two are temporal features
 # that let the model separate steady sellers from spiky / seasonal products.

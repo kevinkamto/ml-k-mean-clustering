@@ -16,7 +16,7 @@ Run with::
 from __future__ import annotations
 
 from src import config, feature_engineering, parser, preprocessing, visualization
-from src.clustering import run_clustering
+from src.clustering import run_clustering, run_segmented_clustering
 from src.schema import ScoreCol, TxnCol
 
 
@@ -42,12 +42,21 @@ def main() -> None:
     print(f"[3/5] Built features for {len(products):,} products.")
 
     # Phases 6 to 8 and 10: cluster and profile.
-    result = run_clustering(products)
+    result = (
+        run_segmented_clustering(products)
+        if config.SEPARATE_EXCISE
+        else run_clustering(products)
+    )
     result.products.to_csv(config.CLUSTERED_CSV, index=False, encoding="utf-8")
     result.profiles.to_csv(config.CLUSTER_PROFILE_CSV, index=False, encoding="utf-8")
+    silhouette = (
+        f"{result.scores[ScoreCol.SILHOUETTE].max():.3f}"
+        if result.scores is not None
+        else "n/a"
+    )
     print(
-        f"[4/5] Clustered into k={result.optimal_k} "
-        f"(best silhouette = {result.scores[ScoreCol.SILHOUETTE].max():.3f})."
+        f"[4/5] Clustered into {result.optimal_k} clusters "
+        f"(general silhouette = {silhouette})."
     )
 
     # Phases 3 and 9: figures.
