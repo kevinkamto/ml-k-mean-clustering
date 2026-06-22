@@ -25,14 +25,19 @@ from src.schema import ProdCol, ProfileCol, ScoreCol
 
 @dataclass
 class ClusteringResult:
-    """Bundle of everything produced by the clustering stage."""
+    """Bundle of everything produced by the clustering stage.
+
+    For the segmented (excise-separated) path, ``scores``, ``model``, and
+    ``scaler`` refer to the primary (general) group, and ``optimal_k`` is the
+    total number of clusters across groups.
+    """
 
     products: pd.DataFrame  # product table with a ``cluster`` column
-    scores: pd.DataFrame  # per-k elbow and silhouette scores
+    scores: pd.DataFrame | None  # per-k elbow and silhouette scores
     profiles: pd.DataFrame  # per-cluster profile table
     optimal_k: int
-    model: KMeans
-    scaler: StandardScaler
+    model: KMeans | None
+    scaler: StandardScaler | None
 
 
 def scale_features(
@@ -180,15 +185,83 @@ def run_clustering(products: pd.DataFrame) -> ClusteringResult:
     )
 
 
+def _cluster_group(
+    subset: pd.DataFrame, label_offset: int, group_name: str
+) -> tuple[pd.DataFrame, pd.DataFrame | None, int, KMeans | None, StandardScaler | None]:
+    """Cluster one product group, offsetting labels to stay globally unique.
+
+    Groups too small to sweep k (fewer than ``K_MIN + 1`` products) collapse to
+    a single cluster.
+    """
+    out = subset.copy()
+    out[ProdCol.SEGMENT_GROUP] = group_name
+    n = len(subset)
+    if n == 0:
+        return out, None, 0, None, None
+    if n < config.K_MIN + 1:
+        out[ProdCol.CLUSTER] = label_offset
+        return out, None, 1, None, None
+
+    scaled, scaler = scale_features(subset)
+    scores = evaluate_k(scaled)
+    k = select_optimal_k(scores)
+    model, labels = fit_kmeans(scaled, k)
+    out[ProdCol.CLUSTER] = labels + label_offset
+    return out, scores, k, model, scaler
+
+
+def run_segmented_clustering(products: pd.DataFrame) -> ClusteringResult:
+    """Cluster non-excise and excise products in separate passes (Phase 8b).
+
+    Excise goods are scaled and clustered on their own so they do not skew the
+    general segmentation. Cluster labels are offset so they remain unique across
+    both groups, and a ``segment_group`` column records the origin.
+    """
+    excise_mask = products[ProdCol.IS_EXCISE].astype(bool)
+    general = products[~excise_mask]
+    excise = products[excise_mask]
+
+    gen_out, gen_scores, gen_k, gen_model, gen_scaler = _cluster_group(
+        general, label_offset=0, group_name="general"
+    )
+    exc_out, _, exc_k, _, _ = _cluster_group(
+        excise, label_offset=gen_k, group_name="excise"
+    )
+
+    combined = pd.concat([gen_out, exc_out], ignore_index=True).sort_values(
+        ProdCol.TOTAL_REVENUE, ascending=False
+    )
+    profiles = build_cluster_profiles(combined)
+    # Tag each cluster with the group it came from.
+    group_by_cluster = combined.groupby(ProdCol.CLUSTER)[ProdCol.SEGMENT_GROUP].first()
+    profiles[ProfileCol.SEGMENT_GROUP] = profiles[ProfileCol.CLUSTER].map(
+        group_by_cluster
+    )
+
+    return ClusteringResult(
+        products=combined,
+        scores=gen_scores,
+        profiles=profiles,
+        optimal_k=gen_k + exc_k,
+        model=gen_model,
+        scaler=gen_scaler,
+    )
+
+
 def main() -> None:
     """Read product features, cluster them, and write the results."""
     config.ensure_output_dirs()
     products = pd.read_csv(config.PRODUCTS_CSV)
-    result = run_clustering(products)
+    result = (
+        run_segmented_clustering(products)
+        if config.SEPARATE_EXCISE
+        else run_clustering(products)
+    )
 
     result.products.to_csv(config.CLUSTERED_CSV, index=False, encoding="utf-8")
     result.profiles.to_csv(config.CLUSTER_PROFILE_CSV, index=False, encoding="utf-8")
-    print(result.scores.to_string(index=False))
+    if result.scores is not None:
+        print(result.scores.to_string(index=False))
     print(f"\nOptimal k = {result.optimal_k}")
     print(f"Wrote {config.CLUSTERED_CSV}")
     print(f"Wrote {config.CLUSTER_PROFILE_CSV}")

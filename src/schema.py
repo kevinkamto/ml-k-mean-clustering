@@ -56,6 +56,7 @@ class ProdCol(StrEnum):
     IS_EXCISE = "is_excise"
     # Assigned by the clustering stage.
     CLUSTER = "cluster"
+    SEGMENT_GROUP = "segment_group"
 
 
 class ScoreCol(StrEnum):
@@ -79,3 +80,4 @@ class ProfileCol(StrEnum):
     AVG_REVENUE_PER_TXN = "avg_revenue_per_txn"
     TOTAL_REVENUE = "total_revenue"
     REVENUE_SHARE = "revenue_share"
+    SEGMENT_GROUP = "segment_group"

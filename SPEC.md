@@ -236,6 +236,15 @@ Outputs:
 - cluster centroids
 - products with assigned clusters
 
+## Phase 8b: Separate excise clustering
+
+Excise (cukai) products such as cigarettes have extreme price and revenue and
+distort the general segmentation. When `SEPARATE_EXCISE` is enabled, non-excise
+and excise products are scaled and clustered in independent passes. Cluster
+labels are offset so they stay unique across groups, and a `segment_group`
+column ("general" or "excise") records each product's origin. A group too small
+to sweep k collapses to a single cluster.
+
 ---
 
 # Phase 9: Visualization
