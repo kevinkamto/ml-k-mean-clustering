@@ -1,0 +1,24 @@
+[project]
+name = "retail-product-clustering"
+version = "0.1.0"
+description = "K-Means product segmentation on retail supermarket POS receipt data"
+readme = "CLAUDE.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.2",
+    "numpy>=1.26",
+    "matplotlib>=3.8",
+    "seaborn>=0.13",
+    "scikit-learn>=1.4",
+    "scipy>=1.12",
+]
+
+[dependency-groups]
+dev = [
+    "jupyter>=1.0",
+    "ipykernel>=6.29",
+]
+
+# This is an application (a pipeline of scripts), not an installable library.
+[tool.uv]
+package = false
