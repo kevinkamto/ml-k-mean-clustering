@@ -18,6 +18,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 import pandas as pd
+from loguru import logger
 
 from src import config
 from src.schema import TxnCol
@@ -123,8 +124,8 @@ def main() -> None:
     raw = pd.read_csv(config.RAW_TRANSACTIONS_CSV)
     clean, report = clean_transactions(raw)
     clean.to_csv(config.TRANSACTIONS_CSV, index=False, encoding="utf-8")
-    print(report.summary())
-    print(f"Wrote {config.TRANSACTIONS_CSV}")
+    logger.info(report.summary())
+    logger.info("Wrote {}", config.TRANSACTIONS_CSV)
 
 
 if __name__ == "__main__":

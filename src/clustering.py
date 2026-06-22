@@ -15,6 +15,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
@@ -261,10 +262,10 @@ def main() -> None:
     result.products.to_csv(config.CLUSTERED_CSV, index=False, encoding="utf-8")
     result.profiles.to_csv(config.CLUSTER_PROFILE_CSV, index=False, encoding="utf-8")
     if result.scores is not None:
-        print(result.scores.to_string(index=False))
-    print(f"\nOptimal k = {result.optimal_k}")
-    print(f"Wrote {config.CLUSTERED_CSV}")
-    print(f"Wrote {config.CLUSTER_PROFILE_CSV}")
+        logger.info("Per-k scores:\n{}", result.scores.to_string(index=False))
+    logger.info("Optimal k = {}", result.optimal_k)
+    logger.info("Wrote {}", config.CLUSTERED_CSV)
+    logger.info("Wrote {}", config.CLUSTER_PROFILE_CSV)
 
 
 if __name__ == "__main__":

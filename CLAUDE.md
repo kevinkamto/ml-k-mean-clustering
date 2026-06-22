@@ -73,6 +73,7 @@ Common commands:
 - seaborn
 - scikit-learn
 - scipy
+- loguru (logging; use `logger` instead of `print` in `src/`)
 - jupyter (dev)
 - ipykernel (dev)
 
