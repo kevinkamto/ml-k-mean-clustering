@@ -24,7 +24,8 @@ from __future__ import annotations
 
 import pandas as pd
 
-from . import config, preprocessing
+from src import config, preprocessing
+from src.schema import ProdCol, TxnCol
 
 
 def _dominant_name(names: pd.Series) -> str:
@@ -39,30 +40,33 @@ def _dominant_name(names: pd.Series) -> str:
 
 def aggregate_products(transactions: pd.DataFrame) -> pd.DataFrame:
     """Aggregate transaction lines into one row per product (Phase 4)."""
-    grouped = transactions.groupby("product_code", sort=False)
+    grouped = transactions.groupby(TxnCol.PRODUCT_CODE, sort=False)
 
     products = grouped.agg(
-        product_name=("product_name", _dominant_name),
-        total_quantity_sold=("quantity", "sum"),
-        total_revenue=("line_total", "sum"),
-        transaction_count=("transaction_uid", "nunique"),
-        total_discount=("line_discount", "sum"),
-        discounted_lines=("line_discount", lambda s: int((s > 0).sum())),
-        line_count=("line_total", "size"),
-        is_excise=("is_excise", "max"),
+        **{
+            ProdCol.PRODUCT_NAME: (TxnCol.PRODUCT_NAME, _dominant_name),
+            ProdCol.TOTAL_QUANTITY_SOLD: (TxnCol.QUANTITY, "sum"),
+            ProdCol.TOTAL_REVENUE: (TxnCol.LINE_TOTAL, "sum"),
+            ProdCol.TRANSACTION_COUNT: (TxnCol.TRANSACTION_UID, "nunique"),
+            ProdCol.TOTAL_DISCOUNT: (TxnCol.LINE_DISCOUNT, "sum"),
+            ProdCol.DISCOUNTED_LINES: (
+                TxnCol.LINE_DISCOUNT,
+                lambda s: int((s > 0).sum()),
+            ),
+            ProdCol.LINE_COUNT: (TxnCol.LINE_TOTAL, "size"),
+            ProdCol.IS_EXCISE: (TxnCol.IS_EXCISE, "max"),
+        }
     ).reset_index()
 
     # Effective realised price per unit (revenue already net of discounts).
     # quantity is guaranteed positive by the cleaning step, so this is safe.
-    products["average_price"] = (
-        products["total_revenue"] / products["total_quantity_sold"]
+    products[ProdCol.AVERAGE_PRICE] = (
+        products[ProdCol.TOTAL_REVENUE] / products[ProdCol.TOTAL_QUANTITY_SOLD]
     )
     return products
 
 
-def engineer_features(
-    products: pd.DataFrame, total_days: int
-) -> pd.DataFrame:
+def engineer_features(products: pd.DataFrame, total_days: int) -> pd.DataFrame:
     """Add the engineered ratio features (Phase 5).
 
     ``total_days`` is the number of distinct trading days in the dataset and
@@ -71,22 +75,22 @@ def engineer_features(
     products = products.copy()
 
     # transaction_count is >= 1 for every aggregated product, so safe denom.
-    products["average_quantity_per_transaction"] = (
-        products["total_quantity_sold"] / products["transaction_count"]
+    products[ProdCol.AVERAGE_QUANTITY_PER_TRANSACTION] = (
+        products[ProdCol.TOTAL_QUANTITY_SOLD] / products[ProdCol.TRANSACTION_COUNT]
     )
-    products["revenue_per_transaction"] = (
-        products["total_revenue"] / products["transaction_count"]
+    products[ProdCol.REVENUE_PER_TRANSACTION] = (
+        products[ProdCol.TOTAL_REVENUE] / products[ProdCol.TRANSACTION_COUNT]
     )
 
     # Optional descriptive features (used for profiling, not for clustering).
-    products["discount_frequency"] = (
-        products["discounted_lines"] / products["line_count"]
+    products[ProdCol.DISCOUNT_FREQUENCY] = (
+        products[ProdCol.DISCOUNTED_LINES] / products[ProdCol.LINE_COUNT]
     )
-    products["average_discount"] = (
-        products["total_discount"] / products["line_count"]
+    products[ProdCol.AVERAGE_DISCOUNT] = (
+        products[ProdCol.TOTAL_DISCOUNT] / products[ProdCol.LINE_COUNT]
     )
     days = max(total_days, 1)  # guard against an empty dataset
-    products["sales_frequency_per_day"] = products["transaction_count"] / days
+    products[ProdCol.SALES_FREQUENCY_PER_DAY] = products[ProdCol.TRANSACTION_COUNT] / days
 
     return products
 
@@ -95,40 +99,39 @@ def build_product_features(transactions: pd.DataFrame) -> pd.DataFrame:
     """Run the full product feature build from clean transactions."""
     transactions = transactions.copy()
     # Robust against a CSV round-trip where is_excise comes back as a string.
-    transactions["is_excise"] = preprocessing.coerce_bool(transactions["is_excise"])
-    transactions["transaction_datetime"] = pd.to_datetime(
-        transactions["transaction_datetime"], errors="coerce"
+    transactions[TxnCol.IS_EXCISE] = preprocessing.coerce_bool(
+        transactions[TxnCol.IS_EXCISE]
     )
-    total_days = transactions["transaction_datetime"].dt.normalize().nunique()
+    transactions[TxnCol.TRANSACTION_DATETIME] = pd.to_datetime(
+        transactions[TxnCol.TRANSACTION_DATETIME], errors="coerce"
+    )
+    total_days = transactions[TxnCol.TRANSACTION_DATETIME].dt.normalize().nunique()
     products = aggregate_products(transactions)
     products = engineer_features(products, total_days=total_days)
 
     # Order columns: identifiers, clustering features, then extras.
     ordered = (
-        ["product_code", "product_name"]
+        [ProdCol.PRODUCT_CODE, ProdCol.PRODUCT_NAME]
         + config.CLUSTERING_FEATURES
         + [
-            "discount_frequency",
-            "average_discount",
-            "sales_frequency_per_day",
-            "is_excise",
+            ProdCol.DISCOUNT_FREQUENCY,
+            ProdCol.AVERAGE_DISCOUNT,
+            ProdCol.SALES_FREQUENCY_PER_DAY,
+            ProdCol.IS_EXCISE,
         ]
     )
-    return products[ordered].sort_values("total_revenue", ascending=False)
+    return products[ordered].sort_values(ProdCol.TOTAL_REVENUE, ascending=False)
 
 
 def main() -> None:
     """Read clean transactions and write the product feature table."""
     config.ensure_output_dirs()
     transactions = pd.read_csv(
-        config.TRANSACTIONS_CSV, parse_dates=["transaction_datetime"]
+        config.TRANSACTIONS_CSV, parse_dates=[str(TxnCol.TRANSACTION_DATETIME)]
     )
     products = build_product_features(transactions)
     products.to_csv(config.PRODUCTS_CSV, index=False, encoding="utf-8")
-    print(
-        f"Built features for {len(products):,} products -> "
-        f"{config.PRODUCTS_CSV}"
-    )
+    print(f"Built features for {len(products):,} products -> {config.PRODUCTS_CSV}")
 
 
 if __name__ == "__main__":

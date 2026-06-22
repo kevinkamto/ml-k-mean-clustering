@@ -15,8 +15,9 @@ Run with::
 
 from __future__ import annotations
 
-from . import config, feature_engineering, parser, preprocessing, visualization
-from .clustering import run_clustering
+from src import config, feature_engineering, parser, preprocessing, visualization
+from src.clustering import run_clustering
+from src.schema import ScoreCol, TxnCol
 
 
 def main() -> None:
@@ -26,7 +27,7 @@ def main() -> None:
     raw = parser.parse_all()
     raw.to_csv(config.RAW_TRANSACTIONS_CSV, index=False, encoding="utf-8")
     print(
-        f"[1/5] Parsed {raw['source_file'].nunique()} files -> "
+        f"[1/5] Parsed {raw[TxnCol.SOURCE_FILE].nunique()} files -> "
         f"{len(raw):,} product lines."
     )
 
@@ -43,12 +44,10 @@ def main() -> None:
     # Phases 6 to 8 and 10: cluster and profile.
     result = run_clustering(products)
     result.products.to_csv(config.CLUSTERED_CSV, index=False, encoding="utf-8")
-    result.profiles.to_csv(
-        config.CLUSTER_PROFILE_CSV, index=False, encoding="utf-8"
-    )
+    result.profiles.to_csv(config.CLUSTER_PROFILE_CSV, index=False, encoding="utf-8")
     print(
         f"[4/5] Clustered into k={result.optimal_k} "
-        f"(best silhouette = {result.scores['silhouette'].max():.3f})."
+        f"(best silhouette = {result.scores[ScoreCol.SILHOUETTE].max():.3f})."
     )
 
     # Phases 3 and 9: figures.

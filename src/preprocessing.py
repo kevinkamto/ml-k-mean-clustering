@@ -19,17 +19,18 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 
-from . import config
+from src import config
+from src.schema import TxnCol
 
 # Columns whose presence/values are mandatory for a usable transaction line.
 _REQUIRED_COLUMNS = [
-    "transaction_uid",
-    "transaction_datetime",
-    "product_code",
-    "product_name",
-    "quantity",
-    "unit_price",
-    "line_total",
+    TxnCol.TRANSACTION_UID,
+    TxnCol.TRANSACTION_DATETIME,
+    TxnCol.PRODUCT_CODE,
+    TxnCol.PRODUCT_NAME,
+    TxnCol.QUANTITY,
+    TxnCol.UNIT_PRICE,
+    TxnCol.LINE_TOTAL,
 ]
 
 
@@ -42,12 +43,7 @@ def coerce_bool(series: pd.Series) -> pd.Series:
     """
     if pd.api.types.is_bool_dtype(series):
         return series.astype(bool)
-    return (
-        series.astype("string")
-        .str.strip()
-        .str.lower()
-        .isin(("true", "1", "yes"))
-    )
+    return series.astype("string").str.strip().str.lower().isin(("true", "1", "yes"))
 
 
 @dataclass
@@ -78,12 +74,17 @@ def clean_transactions(df: pd.DataFrame) -> tuple[pd.DataFrame, CleaningReport]:
     df = df.copy()
 
     # 1) Validate data types up front so later filters behave predictably.
-    df["product_code"] = df["product_code"].astype("string")
-    df["product_name"] = df["product_name"].astype("string").str.strip()
-    df["transaction_datetime"] = pd.to_datetime(
-        df["transaction_datetime"], errors="coerce"
+    df[TxnCol.PRODUCT_CODE] = df[TxnCol.PRODUCT_CODE].astype("string")
+    df[TxnCol.PRODUCT_NAME] = df[TxnCol.PRODUCT_NAME].astype("string").str.strip()
+    df[TxnCol.TRANSACTION_DATETIME] = pd.to_datetime(
+        df[TxnCol.TRANSACTION_DATETIME], errors="coerce"
     )
-    for col in ("quantity", "unit_price", "line_total", "line_discount"):
+    for col in (
+        TxnCol.QUANTITY,
+        TxnCol.UNIT_PRICE,
+        TxnCol.LINE_TOTAL,
+        TxnCol.LINE_DISCOUNT,
+    ):
         df[col] = pd.to_numeric(df[col], errors="coerce")
 
     # 2) Remove exact duplicate product lines.
@@ -94,22 +95,22 @@ def clean_transactions(df: pd.DataFrame) -> tuple[pd.DataFrame, CleaningReport]:
     # 3) Drop rows with missing required fields (incl. unparseable datetimes).
     before = len(df)
     df = df.dropna(subset=_REQUIRED_COLUMNS)
-    df = df[df["product_name"].str.len() > 0]
+    df = df[df[TxnCol.PRODUCT_NAME].str.len() > 0]
     report.missing_removed = before - len(df)
 
     # 4) Validate quantities: must be a positive whole number.
     before = len(df)
-    df = df[df["quantity"] > 0]
+    df = df[df[TxnCol.QUANTITY] > 0]
     report.invalid_quantity_removed = before - len(df)
 
     # 5) Validate prices: no negative unit prices or line totals.
     before = len(df)
-    df = df[(df["unit_price"] >= 0) & (df["line_total"] >= 0)]
+    df = df[(df[TxnCol.UNIT_PRICE] >= 0) & (df[TxnCol.LINE_TOTAL] >= 0)]
     report.invalid_price_removed = before - len(df)
 
     # Final type tidy-up now that all rows are valid.
-    df["quantity"] = df["quantity"].astype(int)
-    df["is_excise"] = coerce_bool(df["is_excise"])
+    df[TxnCol.QUANTITY] = df[TxnCol.QUANTITY].astype(int)
+    df[TxnCol.IS_EXCISE] = coerce_bool(df[TxnCol.IS_EXCISE])
     df = df.reset_index(drop=True)
 
     report.rows_out = len(df)

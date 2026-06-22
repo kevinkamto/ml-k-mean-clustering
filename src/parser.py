@@ -29,7 +29,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from . import config
+from src import config
+from src.schema import TxnCol
 
 # --- Regular expressions describing the receipt grammar ----------------------
 
@@ -53,9 +54,7 @@ _QTY_LINE_RE = re.compile(
 _NAME_LINE_RE = re.compile(r"^\s*(?P<code>\d+)\s+(?P<name>\S.*?)\s*$")
 
 # Promotional discount row, e.g. "Potongan :   1 x  -1.600     -1.600".
-_POTONGAN_RE = re.compile(
-    r"Potongan\s*:\s*\d+\s*x\s*-?[\d.]+\s+-?(?P<amount>[\d.]+)"
-)
+_POTONGAN_RE = re.compile(r"Potongan\s*:\s*\d+\s*x\s*-?[\d.]+\s+-?(?P<amount>[\d.]+)")
 
 # Datetime format used on transaction header lines (DD-MM-YY/HH:MM:SS).
 _DATETIME_FORMAT = "%d-%m-%y/%H:%M:%S"
@@ -134,21 +133,21 @@ def parse_receipt_file(path: Path) -> list[dict]:
             printed_total = parse_amount(qty_match.group("line_total"))
 
             record = {
-                "source_file": source_file,
-                "station": station,
-                "transaction_id": current_txn_id,
+                TxnCol.SOURCE_FILE: source_file,
+                TxnCol.STATION: station,
+                TxnCol.TRANSACTION_ID: current_txn_id,
                 # A receipt code resets daily, so scope uniqueness to the file.
-                "transaction_uid": f"{source_file}::{current_txn_id}",
-                "transaction_datetime": current_dt,
-                "product_code": name_match.group("code"),
-                "product_name": name,
-                "quantity": quantity,
-                "unit_price": unit_price,
+                TxnCol.TRANSACTION_UID: f"{source_file}::{current_txn_id}",
+                TxnCol.TRANSACTION_DATETIME: current_dt,
+                TxnCol.PRODUCT_CODE: name_match.group("code"),
+                TxnCol.PRODUCT_NAME: name,
+                TxnCol.QUANTITY: quantity,
+                TxnCol.UNIT_PRICE: unit_price,
                 # ``printed_total`` already has the immediate discount removed;
                 # promotional ``Potongan`` rows are subtracted as we see them.
-                "line_total": printed_total,
-                "line_discount": immediate_discount,
-                "is_excise": is_excise,
+                TxnCol.LINE_TOTAL: printed_total,
+                TxnCol.LINE_DISCOUNT: immediate_discount,
+                TxnCol.IS_EXCISE: is_excise,
             }
             records.append(record)
             last_record = record
@@ -158,8 +157,8 @@ def parse_receipt_file(path: Path) -> list[dict]:
         potongan = _POTONGAN_RE.search(line)
         if potongan and last_record is not None:
             promo = parse_amount(potongan.group("amount"))
-            last_record["line_discount"] += promo
-            last_record["line_total"] -= promo
+            last_record[TxnCol.LINE_DISCOUNT] += promo
+            last_record[TxnCol.LINE_TOTAL] -= promo
 
     return records
 
@@ -188,8 +187,8 @@ def parse_all(raw_dir: Path = config.RAW_DATA_DIR) -> pd.DataFrame:
 
     df = pd.DataFrame.from_records(all_records)
     # Convert the datetime column from the receipt format to real datetimes.
-    df["transaction_datetime"] = pd.to_datetime(
-        df["transaction_datetime"], format=_DATETIME_FORMAT, errors="coerce"
+    df[TxnCol.TRANSACTION_DATETIME] = pd.to_datetime(
+        df[TxnCol.TRANSACTION_DATETIME], format=_DATETIME_FORMAT, errors="coerce"
     )
     return df
 
@@ -200,10 +199,10 @@ def main() -> None:
     df = parse_all()
     df.to_csv(config.RAW_TRANSACTIONS_CSV, index=False, encoding="utf-8")
     print(
-        f"Parsed {df['source_file'].nunique()} files -> "
+        f"Parsed {df[TxnCol.SOURCE_FILE].nunique()} files -> "
         f"{len(df):,} product lines, "
-        f"{df['transaction_uid'].nunique():,} transactions, "
-        f"{df['product_code'].nunique():,} distinct products."
+        f"{df[TxnCol.TRANSACTION_UID].nunique():,} transactions, "
+        f"{df[TxnCol.PRODUCT_CODE].nunique():,} distinct products."
     )
     print(f"Wrote {config.RAW_TRANSACTIONS_CSV}")
 

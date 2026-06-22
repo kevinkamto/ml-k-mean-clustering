@@ -8,6 +8,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from src.schema import ProdCol
+
 # --- Reproducibility ---------------------------------------------------------
 # A single seed used for every stochastic step (PCA, K-Means, ...).
 RANDOM_STATE: int = 42
@@ -44,12 +46,12 @@ LOG_TRANSFORM_FEATURES: bool = True
 
 # Features fed to the clustering model (numerical only, see SPEC.md).
 CLUSTERING_FEATURES: list[str] = [
-    "total_quantity_sold",
-    "total_revenue",
-    "transaction_count",
-    "average_price",
-    "average_quantity_per_transaction",
-    "revenue_per_transaction",
+    ProdCol.TOTAL_QUANTITY_SOLD,
+    ProdCol.TOTAL_REVENUE,
+    ProdCol.TRANSACTION_COUNT,
+    ProdCol.AVERAGE_PRICE,
+    ProdCol.AVERAGE_QUANTITY_PER_TRANSACTION,
+    ProdCol.REVENUE_PER_TRANSACTION,
 ]
 
 

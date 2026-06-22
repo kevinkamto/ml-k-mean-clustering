@@ -19,7 +19,8 @@ from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler
 
-from . import config
+from src import config
+from src.schema import ProdCol, ProfileCol, ScoreCol
 
 
 @dataclass
@@ -84,8 +85,7 @@ def evaluate_k(
     upper = min(k_max, n_samples - 1)
     if upper < k_min:
         raise ValueError(
-            f"Not enough samples ({n_samples}) to evaluate k in "
-            f"[{k_min}, {k_max}]."
+            f"Not enough samples ({n_samples}) to evaluate k in [{k_min}, {k_max}]."
         )
 
     rows: list[dict] = []
@@ -98,9 +98,9 @@ def evaluate_k(
         labels = model.fit_predict(scaled)
         rows.append(
             {
-                "k": k,
-                "inertia": float(model.inertia_),
-                "silhouette": float(silhouette_score(scaled, labels)),
+                ScoreCol.K: k,
+                ScoreCol.INERTIA: float(model.inertia_),
+                ScoreCol.SILHOUETTE: float(silhouette_score(scaled, labels)),
             }
         )
     return pd.DataFrame(rows)
@@ -112,8 +112,9 @@ def select_optimal_k(scores: pd.DataFrame) -> int:
     The elbow/inertia curve is reported alongside for context, but silhouette
     gives a single, objective criterion for an automated pipeline.
     """
-    best_row = scores.loc[scores["silhouette"].idxmax()]
-    return int(best_row["k"])
+    # Use numpy positions to keep the return cleanly typed as int.
+    best_pos = int(scores[ScoreCol.SILHOUETTE].to_numpy().argmax())
+    return int(scores[ScoreCol.K].to_numpy()[best_pos])
 
 
 def fit_kmeans(scaled: np.ndarray, k: int) -> tuple[KMeans, np.ndarray]:
@@ -130,24 +131,32 @@ def fit_kmeans(scaled: np.ndarray, k: int) -> tuple[KMeans, np.ndarray]:
 def build_cluster_profiles(products: pd.DataFrame) -> pd.DataFrame:
     """Summarise each cluster for business interpretation (Phase 10)."""
     profile = (
-        products.groupby("cluster")
+        products.groupby(ProdCol.CLUSTER)
         .agg(
-            n_products=("product_code", "count"),
-            avg_quantity_sold=("total_quantity_sold", "mean"),
-            avg_revenue=("total_revenue", "mean"),
-            avg_price=("average_price", "mean"),
-            avg_transaction_count=("transaction_count", "mean"),
-            avg_qty_per_txn=("average_quantity_per_transaction", "mean"),
-            avg_revenue_per_txn=("revenue_per_transaction", "mean"),
-            total_revenue=("total_revenue", "sum"),
+            **{
+                ProfileCol.N_PRODUCTS: (ProdCol.PRODUCT_CODE, "count"),
+                ProfileCol.AVG_QUANTITY_SOLD: (ProdCol.TOTAL_QUANTITY_SOLD, "mean"),
+                ProfileCol.AVG_REVENUE: (ProdCol.TOTAL_REVENUE, "mean"),
+                ProfileCol.AVG_PRICE: (ProdCol.AVERAGE_PRICE, "mean"),
+                ProfileCol.AVG_TRANSACTION_COUNT: (ProdCol.TRANSACTION_COUNT, "mean"),
+                ProfileCol.AVG_QTY_PER_TXN: (
+                    ProdCol.AVERAGE_QUANTITY_PER_TRANSACTION,
+                    "mean",
+                ),
+                ProfileCol.AVG_REVENUE_PER_TXN: (
+                    ProdCol.REVENUE_PER_TRANSACTION,
+                    "mean",
+                ),
+                ProfileCol.TOTAL_REVENUE: (ProdCol.TOTAL_REVENUE, "sum"),
+            }
         )
         .reset_index()
     )
     # Share of overall revenue contributed by each cluster.
-    profile["revenue_share"] = (
-        profile["total_revenue"] / profile["total_revenue"].sum()
+    profile[ProfileCol.REVENUE_SHARE] = (
+        profile[ProfileCol.TOTAL_REVENUE] / profile[ProfileCol.TOTAL_REVENUE].sum()
     )
-    return profile.sort_values("total_revenue", ascending=False)
+    return profile.sort_values(ProfileCol.TOTAL_REVENUE, ascending=False)
 
 
 def run_clustering(products: pd.DataFrame) -> ClusteringResult:
@@ -158,7 +167,7 @@ def run_clustering(products: pd.DataFrame) -> ClusteringResult:
     model, labels = fit_kmeans(scaled, optimal_k)
 
     clustered = products.copy()
-    clustered["cluster"] = labels
+    clustered[ProdCol.CLUSTER] = labels
     profiles = build_cluster_profiles(clustered)
 
     return ClusteringResult(
@@ -178,9 +187,7 @@ def main() -> None:
     result = run_clustering(products)
 
     result.products.to_csv(config.CLUSTERED_CSV, index=False, encoding="utf-8")
-    result.profiles.to_csv(
-        config.CLUSTER_PROFILE_CSV, index=False, encoding="utf-8"
-    )
+    result.profiles.to_csv(config.CLUSTER_PROFILE_CSV, index=False, encoding="utf-8")
     print(result.scores.to_string(index=False))
     print(f"\nOptimal k = {result.optimal_k}")
     print(f"Wrote {config.CLUSTERED_CSV}")
