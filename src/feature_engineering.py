@@ -95,6 +95,55 @@ def engineer_features(products: pd.DataFrame, total_days: int) -> pd.DataFrame:
     return products
 
 
+def compute_temporal_features(transactions: pd.DataFrame) -> pd.DataFrame:
+    """Per-product temporal / seasonality features (Phase 5b).
+
+    Returns one row per product code with:
+
+    * ``active_days``    distinct calendar days the product was sold on,
+    * ``monthly_cv``     coefficient of variation of monthly quantity (spiky
+                         vs steady; 0 when sold in a single month),
+    * ``recency_days``   days between the product's last sale and the dataset's
+                         last trading day (higher means more dormant),
+    * ``weekend_ratio``  share of quantity sold on Saturdays and Sundays.
+    """
+    tx = transactions[
+        [TxnCol.PRODUCT_CODE, TxnCol.TRANSACTION_DATETIME, TxnCol.QUANTITY]
+    ].copy()
+    day = tx[TxnCol.TRANSACTION_DATETIME].dt.normalize()
+    grouped = tx.groupby(TxnCol.PRODUCT_CODE)
+
+    active_days = day.groupby(tx[TxnCol.PRODUCT_CODE]).nunique()
+
+    dataset_last_day = day.max()
+    last_sale = day.groupby(tx[TxnCol.PRODUCT_CODE]).max()
+    recency_days = (dataset_last_day - last_sale).dt.days
+
+    # Monthly quantity per product, then its coefficient of variation.
+    month = tx[TxnCol.TRANSACTION_DATETIME].dt.to_period("M")
+    monthly_qty = tx.groupby([tx[TxnCol.PRODUCT_CODE], month])[TxnCol.QUANTITY].sum()
+    month_groups = monthly_qty.groupby(level=0)
+    monthly_cv = (month_groups.std(ddof=0) / month_groups.mean()).fillna(0.0)
+
+    weekend_qty = (
+        tx[tx[TxnCol.TRANSACTION_DATETIME].dt.weekday >= 5]
+        .groupby(TxnCol.PRODUCT_CODE)[TxnCol.QUANTITY]
+        .sum()
+    )
+    total_qty = grouped[TxnCol.QUANTITY].sum()
+    weekend_ratio = (weekend_qty / total_qty).reindex(total_qty.index).fillna(0.0)
+
+    temporal = pd.DataFrame(
+        {
+            ProdCol.ACTIVE_DAYS: active_days,
+            ProdCol.MONTHLY_CV: monthly_cv,
+            ProdCol.RECENCY_DAYS: recency_days,
+            ProdCol.WEEKEND_RATIO: weekend_ratio,
+        }
+    )
+    return temporal.reset_index(names=ProdCol.PRODUCT_CODE)
+
+
 def build_product_features(transactions: pd.DataFrame) -> pd.DataFrame:
     """Run the full product feature build from clean transactions."""
     transactions = transactions.copy()
@@ -109,6 +158,9 @@ def build_product_features(transactions: pd.DataFrame) -> pd.DataFrame:
     products = aggregate_products(transactions)
     products = engineer_features(products, total_days=total_days)
 
+    temporal = compute_temporal_features(transactions)
+    products = products.merge(temporal, on=ProdCol.PRODUCT_CODE, how="left")
+
     # Order columns: identifiers, clustering features, then extras.
     ordered = (
         [ProdCol.PRODUCT_CODE, ProdCol.PRODUCT_NAME]
@@ -117,6 +169,8 @@ def build_product_features(transactions: pd.DataFrame) -> pd.DataFrame:
             ProdCol.DISCOUNT_FREQUENCY,
             ProdCol.AVERAGE_DISCOUNT,
             ProdCol.SALES_FREQUENCY_PER_DAY,
+            ProdCol.RECENCY_DAYS,
+            ProdCol.WEEKEND_RATIO,
             ProdCol.IS_EXCISE,
         ]
     )

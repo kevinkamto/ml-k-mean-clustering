@@ -150,6 +150,13 @@ Optional features:
 - average_discount
 - sales_frequency_per_day
 
+Temporal / seasonality features (Phase 5b):
+
+- active_days: distinct calendar days the product was sold on
+- monthly_cv: coefficient of variation of monthly quantity (spiky vs steady)
+- recency_days: days between the product's last sale and the last trading day
+- weekend_ratio: share of quantity sold on Saturdays and Sundays
+
 ---
 
 # Final Feature Set
@@ -162,7 +169,9 @@ total_revenue,
 transaction_count,
 average_price,
 average_quantity_per_transaction,
-revenue_per_transaction
+revenue_per_transaction,
+active_days,
+monthly_cv
 ]
 
 Exclude:
