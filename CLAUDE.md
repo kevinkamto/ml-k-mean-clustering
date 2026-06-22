@@ -59,7 +59,10 @@ Common commands:
 - `uv add pandas numpy matplotlib seaborn scikit-learn scipy` to add runtime dependencies.
 - `uv add --dev jupyter ipykernel` to add the notebook toolchain as dev dependencies.
 - `uv sync` to install from the lockfile into `.venv`.
-- `uv run python src/parser.py` to run a script inside the project environment.
+- `uv run python -m src.run_pipeline` to run the full pipeline.
+- `uv run python -m src.parser` to run a single stage (modules use absolute
+  imports, so invoke them with `-m`, not `python src/parser.py`).
+- `uv run python lint.py` to run ruff and mypy; `uv run pytest -q` to run tests.
 - `uv run jupyter lab` to launch the notebook.
 
 ### Libraries
@@ -91,18 +94,26 @@ project/
 │ └── product_clustering.ipynb
 │
 ├── src/
+│ ├── config.py                   # paths, seed, tunables
+│ ├── schema.py                   # StrEnum column names
 │ ├── parser.py
 │ ├── preprocessing.py
 │ ├── feature_engineering.py
 │ ├── clustering.py
-│ └── visualization.py
+│ ├── visualization.py
+│ └── run_pipeline.py             # end-to-end driver
 │
-├── reports/
+├── tests/                        # pytest suite (synthetic data)
+│
+├── reports/                      # final report and figures (gitignored)
 │ └── final_report.md
 │
+├── .github/workflows/ci.yml      # lint + tests on PRs into main
+├── lint.py                       # ruff check --fix, ruff format, mypy
 ├── pyproject.toml
 ├── uv.lock
 ├── .python-version
+├── README.md
 ├── CLAUDE.md
 └── SPEC.md
 
@@ -136,19 +147,22 @@ for:
 ## Version Control Workflow
 
 Never commit or push directly to the `main` branch. All changes flow through
-a pull request:
+a pull request, and every pull request tracks its own GitHub issue:
 
-1. Create a feature branch off the latest `main`, for example
+1. Open (or pick) a GitHub issue describing the work (`gh issue create`).
+2. Create a feature branch off the latest `main`, for example
    `git switch -c feature/parser` or `fix/cleaning-edge-case`.
-2. Commit the work on that branch with clear, focused commits.
-3. Push the branch and open a pull request against `main`
-   (`gh pr create --base main`).
-4. Merge the pull request into `main` after review (`gh pr merge`), then
+3. Commit the work on that branch with clear, focused commits.
+4. Push the branch and open a pull request against `main`
+   (`gh pr create --base main`). The PR body must reference and close its
+   issue, for example `Closes #12`.
+5. The CI workflow (lint, type-check, tests) must pass before merge.
+6. Merge the pull request into `main` after review (`gh pr merge`), then
    delete the feature branch.
 
-Keep `main` always in a working, reproducible state. Branch names use
-`type/short-description` where type is one of `feature`, `fix`, `docs`,
-`chore`, or `refactor`.
+Keep `main` always in a working, reproducible state. Each PR maps to exactly
+one issue. Branch names use `type/short-description` where type is one of
+`feature`, `fix`, `docs`, `chore`, or `refactor`.
 
 ---
 

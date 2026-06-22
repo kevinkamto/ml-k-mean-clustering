@@ -294,12 +294,15 @@ The project is complete when:
 # Delivery Workflow
 
 Changes are never committed or pushed directly to `main`. Each unit of work
-is delivered through a pull request:
+is delivered through a pull request that tracks its own GitHub issue:
 
-1. Branch off the latest `main` (`type/short-description`, where type is one
+1. Open a GitHub issue for the work.
+2. Branch off the latest `main` (`type/short-description`, where type is one
    of `feature`, `fix`, `docs`, `chore`, `refactor`).
-2. Commit the work on that branch.
-3. Open a pull request against `main` and merge it after review.
-4. Delete the feature branch once merged.
+3. Commit the work on that branch.
+4. Open a pull request against `main` whose body closes the issue (for example
+   `Closes #12`). CI (lint, type-check, tests) must pass.
+5. Merge after review and delete the feature branch.
 
-`main` must always remain in a working, reproducible state.
+Every PR maps to exactly one issue. `main` must always remain in a working,
+reproducible state.
