@@ -1,0 +1,32 @@
+# Raw source data (large, and receipts contain member names / PII). Keep local only.
+/dataset
+/.temp
+
+# Generated data products (regenerate from the pipeline)
+/data/processed/
+/data/exports/
+/reports/*.pdf
+
+# uv / Python environment
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Jupyter
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# Tooling caches
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+
+# Claude Code local harness state
+/.claude
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
