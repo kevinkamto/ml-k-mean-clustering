@@ -41,11 +41,49 @@ Outputs:
 
 ## Notebook
 
+[`notebooks/product_clustering.ipynb`](notebooks/product_clustering.ipynb) is the
+narrative deliverable: it walks through all 15 phases (parsing, cleaning, EDA,
+feature engineering, scaling, elbow, silhouette, K-Means, visualization,
+profiling, and business insights) and renders every figure inline.
+
+### Launch
+
 ```bash
-uv run jupyter lab   # open notebooks/product_clustering.ipynb
+uv run jupyter lab   # then open notebooks/product_clustering.ipynb
 ```
 
-The notebook walks through all 15 phases and renders the figures inline.
+`uv run` executes inside the project's `.venv`, so the notebook shares the exact
+locked dependencies as the pipeline. If you prefer the classic interface, use
+`uv run jupyter notebook`. To register the environment as a named kernel (for
+editors such as VS Code), run once:
+
+```bash
+uv run python -m ipykernel install --user --name retail-clustering
+```
+
+### What it needs
+
+- The raw receipts must be present in `dataset/struk penjualan 2025/` — the
+  first cell parses them directly (no separate pipeline run is required).
+- The setup cell locates the project root automatically, so the notebook runs
+  from any working directory.
+
+### How to run it
+
+Run the cells top to bottom (`Kernel -> Restart Kernel and Run All Cells`). The
+sections are ordered as a dependency chain — each builds on the variables
+defined above it:
+
+1. parse and clean the receipts,
+2. engineer product features and scale them (`log1p` + `StandardScaler`),
+3. sweep `k` and pick the optimal value (elbow + silhouette),
+4. fit the final K-Means model and assign clusters,
+5. profile the clusters and add the excise-separated refinement (section 13b),
+6. summarise the business insights.
+
+Figures are written to `reports/figures/*.png` as they are produced and
+displayed inline. Re-running the notebook is idempotent: it overwrites the same
+output files each time.
 
 ## Development
 
