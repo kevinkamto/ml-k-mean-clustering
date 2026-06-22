@@ -22,9 +22,6 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 
-# Claude Code local harness state
-/.claude
-
 # OS / editor
 .DS_Store
 Thumbs.db
