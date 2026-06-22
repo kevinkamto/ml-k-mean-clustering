@@ -23,6 +23,7 @@ Optional descriptive features (not used for clustering, kept for profiling)::
 from __future__ import annotations
 
 import pandas as pd
+from loguru import logger
 
 from src import config, preprocessing
 from src.schema import ProdCol, TxnCol
@@ -185,7 +186,9 @@ def main() -> None:
     )
     products = build_product_features(transactions)
     products.to_csv(config.PRODUCTS_CSV, index=False, encoding="utf-8")
-    print(f"Built features for {len(products):,} products -> {config.PRODUCTS_CSV}")
+    logger.info(
+        "Built features for {:,} products -> {}", len(products), config.PRODUCTS_CSV
+    )
 
 
 if __name__ == "__main__":

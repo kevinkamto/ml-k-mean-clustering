@@ -15,6 +15,8 @@ Run with::
 
 from __future__ import annotations
 
+from loguru import logger
+
 from src import config, feature_engineering, parser, preprocessing, visualization
 from src.clustering import run_clustering, run_segmented_clustering
 from src.schema import ScoreCol, TxnCol
@@ -26,20 +28,21 @@ def main() -> None:
     # Phase 1: parse raw receipts.
     raw = parser.parse_all()
     raw.to_csv(config.RAW_TRANSACTIONS_CSV, index=False, encoding="utf-8")
-    print(
-        f"[1/5] Parsed {raw[TxnCol.SOURCE_FILE].nunique()} files -> "
-        f"{len(raw):,} product lines."
+    logger.info(
+        "[1/5] Parsed {} files -> {:,} product lines.",
+        raw[TxnCol.SOURCE_FILE].nunique(),
+        len(raw),
     )
 
     # Phase 2: clean.
     clean, report = preprocessing.clean_transactions(raw)
     clean.to_csv(config.TRANSACTIONS_CSV, index=False, encoding="utf-8")
-    print(f"[2/5] {report.summary()}")
+    logger.info("[2/5] {}", report.summary())
 
     # Phases 4 and 5: product features.
     products = feature_engineering.build_product_features(clean)
     products.to_csv(config.PRODUCTS_CSV, index=False, encoding="utf-8")
-    print(f"[3/5] Built features for {len(products):,} products.")
+    logger.info("[3/5] Built features for {:,} products.", len(products))
 
     # Phases 6 to 8 and 10: cluster and profile.
     result = (
@@ -54,16 +57,17 @@ def main() -> None:
         if result.scores is not None
         else "n/a"
     )
-    print(
-        f"[4/5] Clustered into {result.optimal_k} clusters "
-        f"(general silhouette = {silhouette})."
+    logger.info(
+        "[4/5] Clustered into {} clusters (general silhouette = {}).",
+        result.optimal_k,
+        silhouette,
     )
 
     # Phases 3 and 9: figures.
     paths = visualization.generate_all(result.products, result.scores)
-    print(f"[5/5] Wrote {len(paths)} figures to {config.FIGURES_DIR}.")
+    logger.info("[5/5] Wrote {} figures to {}.", len(paths), config.FIGURES_DIR)
 
-    print("\nPipeline complete.")
+    logger.success("Pipeline complete.")
 
 
 if __name__ == "__main__":

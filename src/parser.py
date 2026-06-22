@@ -28,6 +28,7 @@ import re
 from pathlib import Path
 
 import pandas as pd
+from loguru import logger
 
 from src import config
 from src.schema import TxnCol
@@ -198,13 +199,15 @@ def main() -> None:
     config.ensure_output_dirs()
     df = parse_all()
     df.to_csv(config.RAW_TRANSACTIONS_CSV, index=False, encoding="utf-8")
-    print(
-        f"Parsed {df[TxnCol.SOURCE_FILE].nunique()} files -> "
-        f"{len(df):,} product lines, "
-        f"{df[TxnCol.TRANSACTION_UID].nunique():,} transactions, "
-        f"{df[TxnCol.PRODUCT_CODE].nunique():,} distinct products."
+    logger.info(
+        "Parsed {} files -> {:,} product lines, {:,} transactions, "
+        "{:,} distinct products.",
+        df[TxnCol.SOURCE_FILE].nunique(),
+        len(df),
+        df[TxnCol.TRANSACTION_UID].nunique(),
+        df[TxnCol.PRODUCT_CODE].nunique(),
     )
-    print(f"Wrote {config.RAW_TRANSACTIONS_CSV}")
+    logger.info("Wrote {}", config.RAW_TRANSACTIONS_CSV)
 
 
 if __name__ == "__main__":

@@ -16,6 +16,7 @@ matplotlib.use("Agg")  # headless backend; must be set before pyplot import
 import matplotlib.pyplot as plt  # noqa: E402
 import pandas as pd  # noqa: E402
 import seaborn as sns  # noqa: E402
+from loguru import logger  # noqa: E402
 from sklearn.decomposition import PCA  # noqa: E402
 
 from src import config  # noqa: E402
@@ -208,7 +209,7 @@ def main() -> None:
     scaled, _ = scale_features(products)
     scores = evaluate_k(scaled)
     paths = generate_all(products, scores)
-    print(f"Wrote {len(paths)} figures to {config.FIGURES_DIR}")
+    logger.info("Wrote {} figures to {}", len(paths), config.FIGURES_DIR)
 
 
 if __name__ == "__main__":
