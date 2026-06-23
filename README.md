@@ -131,6 +131,48 @@ Figures are written to `reports/figures/*.png` as they are produced and
 displayed inline. Re-running the notebook is idempotent: it overwrites the same
 output files each time.
 
+### Run on Google Colab
+
+The notebook runs on Colab without code changes. The dataset is **not** bundled
+with the project (the repo is public and the receipts contain member names), so
+you keep it on your own Google Drive and the notebook mounts it at run time.
+
+First, put the `struk penjualan 2025` folder on your Google Drive in this exact
+layout:
+
+```
+MyDrive/
+└── ml-k-means-clustering/
+    └── struk penjualan 2025/
+        ├── 02-20250102.TXT
+        ├── 02-20250103.TXT
+        └── ... (209 .TXT files)
+```
+
+Then:
+
+1. Upload the whole project folder to Colab (for example to `MyDrive`) and open
+   `notebooks/product_clustering.ipynb` in Colab.
+2. In the first code cell (**Google Colab setup**), edit the `DATASET_DIR` line
+   so it points at the folder above:
+   ```python
+   os.environ["DATASET_DIR"] = "/content/drive/MyDrive/ml-k-means-clustering/struk penjualan 2025"
+   ```
+3. Run that first cell and approve the Google Drive mount popup.
+4. `Runtime -> Run all`.
+
+The setup cell installs the dependencies, mounts Drive, and sets `DATASET_DIR`;
+the rest of the notebook is unchanged. To run the full pipeline from a Colab code
+cell instead of the notebook flow, set the same variable inline:
+
+```bash
+!DATASET_DIR="/content/drive/MyDrive/ml-k-means-clustering/struk penjualan 2025" python -m src.run_pipeline
+```
+
+`DATASET_DIR` works anywhere — locally too, to point the pipeline at a dataset
+outside the repo. When it is unset, the default `dataset/struk penjualan 2025/`
+folder is used.
+
 ## Development
 
 ```bash

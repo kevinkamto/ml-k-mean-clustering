@@ -6,6 +6,7 @@ across modules and makes the pipeline reproducible.
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 from src.schema import ProdCol
@@ -18,7 +19,14 @@ RANDOM_STATE: int = 42
 # Project root is the parent of the ``src`` package directory.
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent
 
-RAW_DATA_DIR: Path = PROJECT_ROOT / "dataset" / "struk penjualan 2025"
+# Dataset location. Override with the DATASET_DIR env var (e.g. on Colab, point
+# it at a Google Drive folder); defaults to the in-repo dataset/ folder.
+_DATASET_ENV = os.environ.get("DATASET_DIR")
+RAW_DATA_DIR: Path = (
+    Path(_DATASET_ENV).expanduser()
+    if _DATASET_ENV
+    else PROJECT_ROOT / "dataset" / "struk penjualan 2025"
+)
 PROCESSED_DIR: Path = PROJECT_ROOT / "data" / "processed"
 EXPORTS_DIR: Path = PROJECT_ROOT / "data" / "exports"
 REPORTS_DIR: Path = PROJECT_ROOT / "reports"
