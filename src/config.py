@@ -15,6 +15,13 @@ from src.schema import ProdCol
 # A single seed used for every stochastic step (PCA, K-Means, ...).
 RANDOM_STATE: int = 42
 
+# --- Analysis scope -----------------------------------------------------------
+# The dataset folder is 2025 receipts, but a handful of stray files carry the
+# prior year's trailing days (e.g. a 27-12-2024 receipt logged alongside
+# 2025). The analysis is scoped to a single trading year, so anything outside
+# it is dropped during cleaning (see preprocessing.clean_transactions).
+ANALYSIS_YEAR: int = 2025
+
 # --- Paths -------------------------------------------------------------------
 # Project root is the parent of the ``src`` package directory.
 PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent

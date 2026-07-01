@@ -39,3 +39,16 @@ def test_clean_is_idempotent(transactions_df) -> None:
     twice, report = preprocessing.clean_transactions(once)
     assert len(once) == len(twice)
     assert report.duplicates_removed == 0
+
+
+def test_clean_drops_out_of_scope_year(transactions_df) -> None:
+    df = transactions_df.copy()
+    stray_2024 = df.iloc[[0]].assign(
+        **{TxnCol.TRANSACTION_DATETIME: pd.to_datetime("2024-12-27")}
+    )
+    dirty = pd.concat([df, stray_2024], ignore_index=True)
+
+    clean, report = preprocessing.clean_transactions(dirty)
+
+    assert report.out_of_scope_year_removed == 1
+    assert (clean[TxnCol.TRANSACTION_DATETIME].dt.year == 2025).all()

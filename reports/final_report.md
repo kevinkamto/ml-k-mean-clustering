@@ -73,10 +73,13 @@ selects the `k` with the highest silhouette. See
 
 ## 5. Results (full 2025 dataset)
 
-Parsing the 209 receipt logs yields **52,067 product lines** across **24,070
-transactions** and **1,735 distinct products**. The receipts are clean: the
-cleaning step removed no rows (no duplicates, missing keys, or invalid
-quantities/prices).
+Parsing the 209 receipt logs yields **52,067 product lines**. The dataset
+folder is scoped to trading year 2025, but one stray file (a 27 December 2024
+receipt log) is bundled in; the cleaning step drops its **306 product lines**
+as out-of-scope for the analysis year (`config.ANALYSIS_YEAR`), alongside no
+duplicates, missing keys, or invalid quantities/prices otherwise. This leaves
+**51,761 clean product lines** across **23,891 transactions** and **1,735
+distinct products**.
 
 ### 5a. General segmentation
 
@@ -87,8 +90,8 @@ tail:
 
 | cluster | n_products | avg_quantity_sold | avg_revenue (IDR) | avg_price (IDR) | avg_txn_count | revenue_share |
 | ------- | ---------- | ----------------- | ----------------- | --------------- | ------------- | ------------- |
-| 0 | 1,014 | 89.0 | 938,088 | 12,863 | 48.0 | 93.0% |
-| 1 | 721 | 5.4 | 99,320 | 19,029 | 4.6 | 7.0% |
+| 0 | 1,010 | 88.6 | 934,481 | 12,837 | 47.9 | 92.9% |
+| 1 | 725 | 5.4 | 100,003 | 19,033 | 4.7 | 7.1% |
 
 Cluster 0 is the **fast-moving core**: high quantity and transaction counts at a
 lower price point, carrying 93% of revenue. Cluster 1 is the **slow-moving long

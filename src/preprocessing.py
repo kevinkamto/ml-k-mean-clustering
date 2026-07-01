@@ -56,6 +56,7 @@ class CleaningReport:
     missing_removed: int = 0
     invalid_quantity_removed: int = 0
     invalid_price_removed: int = 0
+    out_of_scope_year_removed: int = 0
     rows_out: int = 0
     notes: list[str] = field(default_factory=list)
 
@@ -65,7 +66,8 @@ class CleaningReport:
             f"(dups -{self.duplicates_removed:,}, "
             f"missing -{self.missing_removed:,}, "
             f"bad qty -{self.invalid_quantity_removed:,}, "
-            f"bad price -{self.invalid_price_removed:,})"
+            f"bad price -{self.invalid_price_removed:,}, "
+            f"out-of-scope year -{self.out_of_scope_year_removed:,})"
         )
 
 
@@ -108,6 +110,13 @@ def clean_transactions(df: pd.DataFrame) -> tuple[pd.DataFrame, CleaningReport]:
     before = len(df)
     df = df[(df[TxnCol.UNIT_PRICE] >= 0) & (df[TxnCol.LINE_TOTAL] >= 0)]
     report.invalid_price_removed = before - len(df)
+
+    # 6) Restrict to the analysis year: a few stray receipts (e.g. a trailing
+    # 2024 file dropped in the 2025 folder) fall outside the scoped trading
+    # year and must not influence product-level aggregates.
+    before = len(df)
+    df = df[df[TxnCol.TRANSACTION_DATETIME].dt.year == config.ANALYSIS_YEAR]
+    report.out_of_scope_year_removed = before - len(df)
 
     # Final type tidy-up now that all rows are valid.
     df[TxnCol.QUANTITY] = df[TxnCol.QUANTITY].astype(int)

@@ -85,12 +85,16 @@ Tasks:
 3. Validate data types
 4. Validate quantities
 5. Validate prices
+6. Restrict transactions to the analysis year (`config.ANALYSIS_YEAR`),
+   dropping stray prior-year receipts (e.g. a trailing 2024 file mixed into
+   the 2025 dataset folder)
 
 Acceptance Criteria:
 
 - no invalid quantities
 - no negative prices
 - no duplicated transactions
+- no transactions outside the analysis year
 
 ---
 
